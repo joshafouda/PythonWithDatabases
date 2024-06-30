@@ -315,3 +315,219 @@ with engine.connect() as conn:
 - **SQLAlchemy** permet de définir et gérer les tables de manière déclarative.
 - **`MetaData`** centralise les informations sur les tables et leurs relations.
 - L'utilisation de **contextes** avec `with` garantit une bonne gestion des connexions à la base de données.
+
+
+# Utilisation de MySQL dans Python
+
+## Connection d'un script Python a une base de données MySQL
+
+```python
+#CREATE DATABASE projects;
+#use projects;
+#CREATE TABLE projects( project_id INT(11) NOT NULL AUTO_INCREMENT, title VARCHAR(30), description VARCHAR(255), PRIMARY KEY(project_id));
+#CREATE TABLE tasks ( task_id INT(11) NOT NULL AUTO_INCREMENT, project_id INT(11) NOT NULL, description VARCHAR(255), PRIMARY KEY(task_id), FOREIGN KEY(project_id) REFERENCES projects(project_id)),
+#show tables;
+#INSERT INTO projects(title, description) VALUES ("Organize Photos", "Organize old iPhone photos by year");
+#INSERT INTO tasks(project_id, description) VALUES(1, "Organize 2020 photos");
+#INSERT INTO tasks(project_id, description) VALUES(1, "Organize 2019 photos");
+#INSERT INTO projects(title, description) VALUES ("Read More", "Read a book a month this year");
+#INSERT INTO tasks(project_id, description) VALUES(2, "Read The Huntress");
+#SELECT * FROM projects,
+#SELECT * FROM tasks;
+
+#pip install mysql-connector-python
+
+import mysql.connector as mysql
+
+def connect(db_name):
+    try:
+        return mysql.connect(
+            host="localhost",
+            user="root",
+            password="pqssword",
+            database=db_name
+        )
+    except Error as e:
+        print(e)
+
+if __name__ == '__main__':
+    db = connect("projects")
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM projects")
+    project_records = cursor.fetchall()
+    print(project_records)
+    db.close()
+```
+
+
+Voici une explication détaillée du code :
+
+### Partie SQL
+
+1. **Création de la base de données** :
+   ```sql
+   CREATE DATABASE projects;
+   USE projects;
+   ```
+   - Crée une base de données nommée `projects` et l’utilise.
+
+2. **Création des tables** :
+   ```sql
+   CREATE TABLE projects(
+       project_id INT(11) NOT NULL AUTO_INCREMENT,
+       title VARCHAR(30),
+       description VARCHAR(255),
+       PRIMARY KEY(project_id)
+   );
+   ```
+   - Crée une table `projects` avec un identifiant unique `project_id`, un `title`, et une `description`.
+
+   ```sql
+   CREATE TABLE tasks (
+       task_id INT(11) NOT NULL AUTO_INCREMENT,
+       project_id INT(11) NOT NULL,
+       description VARCHAR(255),
+       PRIMARY KEY(task_id),
+       FOREIGN KEY(project_id) REFERENCES projects(project_id)
+   );
+   ```
+   - Crée une table `tasks` qui contient des tâches liées à un projet spécifique, avec un `task_id` unique et un `project_id` comme clé étrangère qui référence `projects`.
+
+3. **Affichage des tables** :
+   ```sql
+   SHOW TABLES;
+   ```
+   - Affiche les tables dans la base de données.
+
+4. **Insertion de données** :
+   ```sql
+   INSERT INTO projects(title, description) VALUES ("Organize Photos", "Organize old iPhone photos by year");
+   INSERT INTO tasks(project_id, description) VALUES(1, "Organize 2020 photos");
+   INSERT INTO tasks(project_id, description) VALUES(1, "Organize 2019 photos");
+   INSERT INTO projects(title, description) VALUES ("Read More", "Read a book a month this year");
+   INSERT INTO tasks(project_id, description) VALUES(2, "Read The Huntress");
+   ```
+   - Insère des projets et des tâches associés dans les tables `projects` et `tasks`.
+
+5. **Sélection des données** :
+   ```sql
+   SELECT * FROM projects;
+   SELECT * FROM tasks;
+   ```
+   - Sélectionne et affiche toutes les entrées des tables `projects` et `tasks`.
+
+### Partie Python
+
+1. **Installation du connecteur MySQL** :
+   ```bash
+   pip install mysql-connector-python
+   ```
+   - Installe le connecteur MySQL pour Python.
+
+2. **Code Python** :
+   ```python
+   import mysql.connector as mysql
+
+   def connect(db_name):
+       try:
+           return mysql.connect(
+               host="localhost",
+               user="root",
+               password="pqssword",
+               database=db_name
+           )
+       except Error as e:
+           print(e)
+
+   if __name__ == '__main__':
+       db = connect("projects")
+       cursor = db.cursor()
+       cursor.execute("SELECT * FROM projects")
+       project_records = cursor.fetchall()
+       print(project_records)
+       db.close()
+   ```
+
+### Explication du code Python :
+
+- **Importation** :
+  - `import mysql.connector as mysql` : Importe le module pour interagir avec MySQL.
+
+- **Fonction `connect`** :
+  - Connecte à la base de données `projects` avec les informations d'identification fournies.
+  - Gère les exceptions et affiche une erreur en cas de problème.
+
+- **Bloc principal** :
+  - Connecte à la base de données `projects`.
+  - Crée un curseur pour exécuter des requêtes SQL.
+  - Exécute une requête pour récupérer tous les enregistrements de la table `projects`.
+  - Affiche les enregistrements récupérés.
+  - Ferme la connexion à la base de données.
+
+### Points clés :
+- **Clés primaires et étrangères** : Assurent l'intégrité référentielle entre les tables.
+- **Connexion MySQL** : Permet d'exécuter des requêtes SQL depuis un script Python.
+- **Gestion des exceptions** : Assure la robustesse du code en cas d'erreurs de connexion.
+
+
+## Encapsuler les opérations de base de données
+
+```python
+def add_project(cursor, project_title, project_description, tasks):
+    project_data = (project_title, project_description)
+    cursor.execute('''INSERT INTO projects(title, description)
+                      VALUES (%s, %s)''', project_data)
+    tasks_data = []
+    for task in tasks:
+        task_data = (cursor.lastrowid, task)
+        tasks_data.append(task_data)
+    cursor.executemany('''INSERT INTO tasks(project_id, description)
+                          VALUES(%s, %s)''', tasks_data)
+```
+
+Voici une explication du code :
+
+### Explication détaillée
+
+1. **Paramètres de la fonction** :
+   - `cursor` : L'objet curseur pour exécuter les requêtes SQL.
+   - `project_title` : Le titre du projet à ajouter.
+   - `project_description` : La description du projet.
+   - `tasks` : Une liste de descriptions de tâches associées au projet.
+
+2. **Insertion du projet** :
+   ```python
+   project_data = (project_title, project_description)
+   cursor.execute('''INSERT INTO projects(title, description)
+                     VALUES (%s, %s)''', project_data)
+   ```
+   - Crée un tuple `project_data` contenant le titre et la description du projet.
+   - Exécute une requête pour insérer ces données dans la table `projects`.
+
+3. **Préparation des données des tâches** :
+   ```python
+   tasks_data = []
+   for task in tasks:
+       task_data = (cursor.lastrowid, task)
+       tasks_data.append(task_data)
+   ```
+   - Initialise une liste vide `tasks_data`.
+   - Pour chaque tâche dans la liste `tasks` :
+     - Crée un tuple `task_data` contenant l'identifiant du projet (`cursor.lastrowid`, qui récupère l'ID du dernier projet inséré) et la description de la tâche.
+     - Ajoute ce tuple à `tasks_data`.
+
+4. **Insertion des tâches** :
+   ```python
+   cursor.executemany('''INSERT INTO tasks(project_id, description)
+                         VALUES(%s, %s)''', tasks_data)
+   ```
+   - Utilise `executemany` pour insérer toutes les tâches associées au projet dans la table `tasks`.
+   - Chaque entrée de `tasks_data` contient un `project_id` et une `description`.
+
+### Résumé
+
+- **Objectif** : La fonction ajoute un projet avec plusieurs tâches associées dans une base de données.
+- **Insertion en deux étapes** :
+  1. Insertion du projet.
+  2. Insertion des tâches en utilisant l'ID du projet récemment ajouté.
+- **Utilisation de `cursor.lastrowid`** : Pour lier chaque tâche au bon projet.
